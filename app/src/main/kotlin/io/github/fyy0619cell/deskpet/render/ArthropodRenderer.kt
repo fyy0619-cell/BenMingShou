@@ -188,8 +188,10 @@ class ArthropodRenderer(look: Look) : PetRenderer(look) {
         var px = x
         var py = y
         val paint = kit.shaded(base, y - 70f, y)
+        // Angles grow from back-and-slightly-up (200°) through straight up (270°) so the
+        // tail arches over the back the way a scorpion's does.
         for (i in 0 until 5) {
-            val a = Math.toRadians((200.0 - i * 38.0 * curlUp)).toFloat()
+            val a = Math.toRadians((200.0 + i * 30.0 * curlUp)).toFloat()
             val nx = px + kotlin.math.cos(a) * 13f
             val ny = py + kotlin.math.sin(a) * 13f + (if (i > 2) sway else 0f)
             c.drawCircle(nx, ny, 8f - i * 0.6f, paint)

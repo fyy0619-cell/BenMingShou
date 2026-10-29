@@ -173,7 +173,8 @@ class OverlayService : Service() {
         ).apply {
             gravity = Gravity.TOP or Gravity.START
             x = b.clampX(prefs.getFloat(KEY_X, b.maxX - 12 * b.density)).toInt()
-            y = b.clampY(prefs.getFloat(KEY_Y, b.height * 0.62f)).toInt()
+            // Mid-screen by default: lower down it sits on top of the launcher dock.
+            y = b.clampY(prefs.getFloat(KEY_Y, b.height * 0.45f)).toInt()
         }
         val v = PetOverlayView(this, look)
         v.halo = settings.halo
