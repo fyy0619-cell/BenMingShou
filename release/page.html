@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#F6F4F1">
+<title>本命兽 · 遇见你的本命动物</title>
+<style>
+:root { --paper:#F6F4F1; --ink:#231E29; --muted:#8C8592; --hair:rgba(35,30,41,.12); --gold:#B98A2E; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--paper); color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif;
+  display:flex; justify-content:center; padding:56px 24px 40px; }
+main { width:100%; max-width:440px; }
+.serif { font-family:"Songti SC","Noto Serif CJK SC","Source Han Serif SC",serif; font-weight:500; }
+.eyebrow { font-size:12px; letter-spacing:.35em; color:var(--muted); }
+h1 { font-size:44px; margin:18px 0 4px; letter-spacing:.06em; }
+.lead { color:var(--muted); font-size:16px; line-height:1.9; margin:18px 0 32px; }
+.icon { width:88px; height:88px; border-radius:24px; background:var(--ink); display:block; margin-bottom:28px; }
+a.download { display:block; text-align:center; text-decoration:none; background:var(--ink); color:#fff;
+  border-radius:28px; padding:18px; font-size:16px; letter-spacing:.15em; }
+a.download:active { opacity:.85; }
+.meta { text-align:center; color:var(--muted); font-size:12px; margin:10px 0 40px; letter-spacing:.05em; }
+h2 { font-size:12px; letter-spacing:.35em; color:var(--muted); font-weight:500; margin:36px 0 14px; }
+ol { padding-left:20px; margin:0; line-height:1.9; font-size:15px; }
+ol li { margin-bottom:6px; }
+.note { border-top:1px solid var(--hair); margin-top:36px; padding-top:20px; font-size:14px; line-height:1.9; }
+.note b { font-weight:500; }
+code { display:block; word-break:break-all; font-size:11px; color:var(--muted); background:rgba(35,30,41,.04);
+  border-radius:10px; padding:10px 12px; margin-top:8px; }
+footer { color:var(--muted); font-size:12px; text-align:center; margin-top:40px; }
+</style>
+</head>
+<body>
+<main>
+  <svg class="icon" viewBox="0 0 108 108" aria-hidden="true">
+    <path fill="#F6F4F1" d="M54,32C64.5,32 72.5,46.5 72.5,60C72.5,71.5 64.2,79.5 54,79.5C43.8,79.5 35.5,71.5 35.5,60C35.5,46.5 43.5,32 54,32Z"/>
+    <path fill="#231E29" d="M37.6,52.6L43.8,48.6L48.2,53.2L53.4,47.4L58.4,53.2L63.4,48.6L70.4,52.6L70.6,59.6L63.4,55.8L58.4,60.6L53.4,54.8L48.2,60.6L43.8,56L37.4,59.8Z"/>
+    <circle fill="#fff" cx="48.4" cy="56.6" r="1.9"/><circle fill="#fff" cx="58.6" cy="56.9" r="1.9"/>
+    <path fill="#D9B25A" d="M68.5,37.5l1.1,2.6l2.6,1.1l-2.6,1.1l-1.1,2.6l-1.1,-2.6l-2.6,-1.1l2.6,-1.1z"/>
+  </svg>
+  <div class="eyebrow">遇见你的本命动物</div>
+  <h1 class="serif">本命兽</h1>
+  <p class="lead">回答 6 个问题，从远古到现代的 71 种生命里，找到只属于你的那一只。<br>
+  它会住在你的手机桌面上：陪你走、陪你睡，偶尔飞过、游过屏幕。</p>
+
+  <a class="download" href="{{APK}}" download>下载安卓安装包</a>
+  <div class="meta">v{{VERSION}} · {{SIZE}} · Android 10 及以上</div>
+
+  <h2>安 装 步 骤</h2>
+  <ol>
+    <li>下载完成后，在通知栏或「文件管理 → 下载」里点开安装包。</li>
+    <li>如提示「未知来源」，允许当前浏览器或文件管理安装应用。</li>
+    <li>打开本命兽，完成测验后点「让它去桌面」，按提示开启「显示在其他应用上层」。</li>
+    <li>开关是灰色、点不动？进入 设置 → 应用 → 本命兽，点右上角「⋮」选择「允许受限制的设置」，再回来打开。</li>
+  </ol>
+
+  <div class="note">
+    <b>完全离线。</b>本命兽没有联网权限，不收集任何信息，没有广告和统计。你的测验答案和宠物只保存在你自己的手机上。
+  </div>
+  <div class="note">
+    <b>校验安装包</b>（可选）：SHA-256
+    <code>{{SHA256}}</code>
+  </div>
+  <footer>© 2026 fyy0619-cell</footer>
+</main>
+</body>
+</html>
