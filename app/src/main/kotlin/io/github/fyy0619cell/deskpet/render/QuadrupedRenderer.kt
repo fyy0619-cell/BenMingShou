@@ -1,12 +1,22 @@
 package io.github.fyy0619cell.deskpet.render
 
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Path
+import io.github.fyy0619cell.deskpet.render.Feature.ANTLERS
+import io.github.fyy0619cell.deskpet.render.Feature.HORNS
+import io.github.fyy0619cell.deskpet.render.Feature.LONG_NECK
 import io.github.fyy0619cell.deskpet.render.Feature.MANE
+import io.github.fyy0619cell.deskpet.render.Feature.MASK
+import io.github.fyy0619cell.deskpet.render.Feature.PIG_SNOUT
+import io.github.fyy0619cell.deskpet.render.Feature.POUCH_STRIPES
 import io.github.fyy0619cell.deskpet.render.Feature.SHAGGY_FUR
+import io.github.fyy0619cell.deskpet.render.Feature.TAIL_RINGS
 import io.github.fyy0619cell.deskpet.render.Feature.TEETH
 import io.github.fyy0619cell.deskpet.render.Feature.TRUNK
 import io.github.fyy0619cell.deskpet.render.Feature.TUSKS
+import kotlin.math.cos
+import kotlin.math.sin
 
 class QuadrupedRenderer(look: Look) : PetRenderer(look) {
     private val bw = 84f * look.bodyLength
@@ -14,17 +24,23 @@ class QuadrupedRenderer(look: Look) : PetRenderer(look) {
     private val legLen = 24f * look.legLength
     private val hr = 31f * look.headSize
     private val lw = 12.5f * (0.8f + 0.2f * look.bodyHeight)
-    private val bodyCx = 90f - (bw - 84f) * 0.25f
+    private val longNeck = look.has(LONG_NECK)
+    private val neckLen = if (longNeck) 52f else 0f
+    private val bodyCx = 90f - (bw - 84f) * 0.25f - (if (longNeck) 8f else 0f)
     private val panda = look.pattern == Pattern.PANDA
     private val limbTone = if (panda) accent else base
     private val farLimb = Tone(limbTone.dark)
     private val bodyPath = Path()
     private val headPath = Path()
     private val stripes = Patterns.stripeOffsets(look.patternSeed, 6)
-    private val spots = Patterns.spotOffsets(look.patternSeed, 11)
+    private val spots = Patterns.spotOffsets(look.patternSeed, 12)
     private val earInner = ColorX.mix(look.palette.belly, 0xFFF0A8B8.toInt(), 0.45f)
     private val frontEar = if (panda) accent else base
     private val backEar = Tone(frontEar.dark)
+    private val snoutTone = Tone(ColorX.darker(look.palette.base, 0.04f))
+    private val hornColor = 0xFFEADCC4.toInt()
+    private val antlerColor = 0xFFB98F63.toInt()
+    private val noseR = hr * (0.1f + (0.85f - look.snout).coerceAtLeast(0f) * 0.55f)
 
     override val shadowHalfWidth = bw * 0.62f + 10f
     override val shadowCenterX = bodyCx + 10f
@@ -33,16 +49,18 @@ class QuadrupedRenderer(look: Look) : PetRenderer(look) {
         val standing = 1f - tuck * 0.88f
         val bodyBottom = GROUND - legLen * standing + 3f + tuck * 3f
         val bodyCy = bodyBottom - bh / 2f - breathe * 0.5f
-        val headCx = bodyCx + bw * 0.42f + hr * 0.32f
-        val headCy = bodyCy - bh * 0.36f - hr * 0.22f + tuck * hr * 0.55f
+        val neckDrop = tuck * (hr * 0.55f + neckLen * 0.8f)
+        val headCx = bodyCx + bw * 0.42f + hr * 0.32f + (if (longNeck) 10f + tuck * 12f else 0f)
+        val headCy = bodyCy - bh * 0.36f - hr * 0.22f - neckLen + neckDrop
         val legTop = bodyCy + bh * 0.12f
         val legH = GROUND - legTop
         val backX = bodyCx - bw * 0.3f
         val frontX = bodyCx + bw * 0.27f
 
         Tails.draw(
-            kit, c, look.tail, bodyCx - bw * 0.46f, bodyCy - bh * 0.12f, 70f, tailSway, base, accent,
-            curl = curl, groundY = GROUND - 3f, bands = look.pattern == Pattern.STRIPES,
+            kit, c, look.tail, bodyCx - bw * 0.46f, bodyCy - bh * 0.12f, if (longNeck) 52f else 70f, tailSway, base, accent,
+            curl = if (longNeck) maxOf(curl, 0.75f) else curl, groundY = if (longNeck) minOf(bodyCy + bh * 0.9f, GROUND - 3f) else GROUND - 3f,
+            bands = look.has(TAIL_RINGS) || (look.pattern == Pattern.STRIPES && !look.has(POUCH_STRIPES)),
         )
         if (standing > 0.3f) {
             leg(c, backX + 7f, legTop, legH, -legSwing, farLimb)
@@ -65,11 +83,32 @@ class QuadrupedRenderer(look: Look) : PetRenderer(look) {
         if (standing <= 0.3f) {
             kit.ovalC(c, frontX + 10f, GROUND - 4f, lw * 0.9f, lw * 0.45f, kit.solid(limbTone.base))
         }
+        if (longNeck) neck(c, bodyCx + bw * 0.3f, bodyCy - bh * 0.15f, headCx - hr * 0.35f, headCy + hr * 0.35f)
 
         c.save()
         c.rotate(headTilt, headCx - hr * 0.5f, headCy + hr * 0.6f)
         head(c, headCx, headCy)
         c.restore()
+    }
+
+    private fun neck(c: Canvas, x0: Float, y0: Float, x1: Float, y1: Float) {
+        val st = kit.stroke
+        st.strokeWidth = hr * 0.72f
+        st.color = base.base
+        st.shader = kit.vgrad(base.light, base.dark, y1, y0 + 20f)
+        val p = kit.path
+        p.rewind()
+        p.moveTo(x0, y0)
+        p.quadTo(x1 - 6f, (y0 + y1) / 2f, x1, y1)
+        c.drawPath(p, st)
+        st.shader = null
+        if (look.pattern == Pattern.PATCHES) {
+            val dot = kit.solid(accent.base)
+            for (i in 1..3) {
+                val f = i / 4f
+                c.drawCircle(x0 + (x1 - x0) * f - 2f, y0 + (y1 - y0) * f, hr * 0.15f, dot)
+            }
+        }
     }
 
     private fun leg(c: Canvas, x: Float, top: Float, len: Float, angle: Float, tone: Tone) {
@@ -83,6 +122,10 @@ class QuadrupedRenderer(look: Look) : PetRenderer(look) {
 
     private fun head(c: Canvas, cx: Float, cy: Float) {
         if (look.has(MANE)) mane(c, cx - hr * 0.1f, cy)
+        if (look.has(ANTLERS)) antlers(c, cx - hr * 0.25f, cy - hr * 0.7f)
+        if (look.has(HORNS)) {
+            if (longNeck) ossicones(c, cx - hr * 0.15f, cy - hr * 0.7f) else horns(c, cx - hr * 0.2f, cy - hr * 0.72f)
+        }
         Ears.draw(kit, c, look.ear, cx - hr * 0.42f, cy - hr * 0.66f, hr, -18f, backEar, earInner)
         if (look.ear == Ear.BIG_FAN) Ears.draw(kit, c, look.ear, cx - hr * 0.15f, cy - hr * 0.35f, hr, 0f, base, earInner)
 
@@ -102,15 +145,20 @@ class QuadrupedRenderer(look: Look) : PetRenderer(look) {
 
         val eyeX = cx + hr * 0.3f
         val eyeY = cy - hr * 0.1f
-        if (look.has(TRUNK)) trunk(c, cx, cy) else muzzle(c, cx, cy)
+        when {
+            look.has(TRUNK) -> trunk(c, cx, cy)
+            look.has(PIG_SNOUT) -> pigSnout(c, cx, cy)
+            else -> muzzle(c, cx, cy)
+        }
         if (look.has(TUSKS)) tusk(c, cx, cy)
+        val ringed = panda || look.has(MASK)
         if (panda) {
             c.save(); c.rotate(-20f, eyeX, eyeY)
             kit.ovalC(c, eyeX - hr * 0.02f, eyeY + hr * 0.04f, hr * 0.24f, hr * 0.3f, kit.solid(accent.base))
             c.restore()
-            if (eyeMode == 0 && blink < 0.85f) c.drawCircle(eyeX, eyeY, hr * 0.15f, kit.solid(0xFFFFFFFF.toInt()))
         }
-        val eyeInk = if (panda && eyeMode != 0) 0xFFF4F1EC.toInt() else look.palette.eye
+        if (ringed && eyeMode == 0 && blink < 0.85f) c.drawCircle(eyeX, eyeY, hr * 0.15f, kit.solid(Color.WHITE))
+        val eyeInk = if (ringed && eyeMode != 0) 0xFFF4F1EC.toInt() else look.palette.eye
         kit.eye(c, eyeX, eyeY, hr * 0.12f, blink, eyeMode, eyeInk)
         kit.blush(c, cx + hr * 0.2f, cy + hr * 0.36f, hr * 0.16f)
     }
@@ -122,21 +170,35 @@ class QuadrupedRenderer(look: Look) : PetRenderer(look) {
         kit.ovalC(c, mx, my, hr * 0.4f * (0.75f + 0.25f * s), hr * 0.28f, kit.solid(belly.base))
         val nx = mx + hr * 0.28f * s
         val ny = my - hr * 0.1f
-        kit.ovalC(c, nx, ny, hr * 0.1f, hr * 0.075f, kit.solid(dark))
-        val p = kit.path
-        p.rewind()
-        p.moveTo(nx - hr * 0.02f, ny + hr * 0.06f)
-        p.quadTo(nx - hr * 0.04f, ny + hr * 0.2f, nx - hr * 0.16f, ny + hr * 0.18f)
-        kit.stroke.strokeWidth = hr * 0.045f; kit.stroke.color = dark; kit.stroke.shader = null
-        c.drawPath(p, kit.stroke)
+        kit.ovalC(c, nx, ny, noseR, noseR * 0.75f, kit.solid(dark))
+        smile(c, nx, ny + noseR * 0.5f)
         if (look.has(TEETH)) {
+            val p = kit.path
             p.rewind()
-            p.moveTo(nx - hr * 0.12f, ny + hr * 0.16f)
-            p.lineTo(nx - hr * 0.08f, ny + hr * 0.42f)
-            p.lineTo(nx - hr * 0.02f, ny + hr * 0.15f)
+            p.moveTo(nx - hr * 0.13f, ny + hr * 0.15f)
+            p.lineTo(nx - hr * 0.08f, ny + hr * 0.5f)
+            p.lineTo(nx - hr * 0.02f, ny + hr * 0.14f)
             p.close()
             c.drawPath(p, kit.solid(0xFFFBF6EC.toInt()))
         }
+    }
+
+    private fun smile(c: Canvas, x: Float, y: Float) {
+        val p = kit.path
+        p.rewind()
+        p.moveTo(x - hr * 0.02f, y)
+        p.quadTo(x - hr * 0.04f, y + hr * 0.14f, x - hr * 0.16f, y + hr * 0.12f)
+        kit.stroke.strokeWidth = hr * 0.045f; kit.stroke.color = dark; kit.stroke.shader = null
+        c.drawPath(p, kit.stroke)
+    }
+
+    private fun pigSnout(c: Canvas, cx: Float, cy: Float) {
+        val sx = cx + hr * 0.86f
+        val sy = cy + hr * 0.2f
+        kit.ovalC(c, sx, sy, hr * 0.2f, hr * 0.27f, kit.shaded(snoutTone, sy - hr * 0.3f, sy + hr * 0.3f))
+        kit.ovalC(c, sx + hr * 0.04f, sy - hr * 0.09f, hr * 0.04f, hr * 0.065f, kit.solid(base.deep))
+        kit.ovalC(c, sx + hr * 0.04f, sy + hr * 0.09f, hr * 0.04f, hr * 0.065f, kit.solid(base.deep))
+        smile(c, sx - hr * 0.2f, sy + hr * 0.26f)
     }
 
     private fun trunk(c: Canvas, cx: Float, cy: Float) {
@@ -164,12 +226,51 @@ class QuadrupedRenderer(look: Look) : PetRenderer(look) {
         c.drawPath(p, kit.stroke)
     }
 
+    private fun horns(c: Canvas, x: Float, y: Float) {
+        val st = kit.stroke
+        st.strokeWidth = hr * 0.16f; st.color = hornColor; st.shader = null
+        val p = kit.path
+        p.rewind()
+        for (i in 0..1) {
+            val ox = x + i * hr * 0.42f
+            p.moveTo(ox, y + hr * 0.15f)
+            p.quadTo(ox - hr * 0.05f, y - hr * 0.35f, ox + hr * 0.25f, y - hr * 0.42f)
+        }
+        c.drawPath(p, st)
+    }
+
+    private fun ossicones(c: Canvas, x: Float, y: Float) {
+        for (i in 0..1) {
+            val ox = x + i * hr * 0.38f
+            kit.line(c, ox, y + hr * 0.15f, ox + hr * 0.05f, y - hr * 0.42f, hr * 0.15f, base.dark)
+            c.drawCircle(ox + hr * 0.05f, y - hr * 0.45f, hr * 0.11f, kit.solid(accent.deep))
+        }
+    }
+
+    private fun antlers(c: Canvas, x: Float, y: Float) {
+        val st = kit.stroke
+        st.strokeWidth = hr * 0.1f; st.color = antlerColor; st.shader = null
+        val p = kit.path
+        p.rewind()
+        for (i in 0..1) {
+            val ox = x + i * hr * 0.4f
+            val k = 1f - i * 0.15f
+            p.moveTo(ox, y + hr * 0.1f)
+            p.quadTo(ox - hr * 0.2f * k, y - hr * 0.5f * k, ox - hr * 0.05f, y - hr * 1.05f * k)
+            p.moveTo(ox - hr * 0.12f * k, y - hr * 0.35f * k)
+            p.lineTo(ox + hr * 0.22f * k, y - hr * 0.6f * k)
+            p.moveTo(ox - hr * 0.1f * k, y - hr * 0.72f * k)
+            p.lineTo(ox - hr * 0.42f * k, y - hr * 0.9f * k)
+        }
+        c.drawPath(p, st)
+    }
+
     private fun mane(c: Canvas, cx: Float, cy: Float) {
         val r = hr * 1.32f
         val p = kit.solid(accent.base)
         for (i in 0 until 12) {
             val a = i / 12f * TAU
-            c.drawCircle(cx + kotlin.math.cos(a) * r * 0.82f, cy + kotlin.math.sin(a) * r * 0.82f, r * 0.3f, p)
+            c.drawCircle(cx + cos(a) * r * 0.82f, cy + sin(a) * r * 0.82f, r * 0.3f, p)
         }
         c.drawCircle(cx, cy, r * 0.88f, p)
     }
@@ -208,12 +309,25 @@ class QuadrupedRenderer(look: Look) : PetRenderer(look) {
     private fun bodyPattern(c: Canvas, cy: Float) {
         val top = cy - bh / 2f
         when (look.pattern) {
-            Pattern.STRIPES -> for (i in stripes.indices) {
-                val x = bodyCx - bw * 0.42f + bw * 0.8f * (i + 0.5f + stripes[i] * 0.3f) / stripes.size
-                Patterns.stripe(kit, c, x, top - 2f, bh * (0.5f + 0.15f * stripes[i]), 3.2f, accent.base)
+            Pattern.STRIPES -> {
+                val rearOnly = look.has(POUCH_STRIPES)
+                val x0 = bodyCx - bw * 0.42f
+                val span = if (rearOnly) bw * 0.38f else bw * 0.8f
+                for (i in stripes.indices) {
+                    val x = x0 + span * (i + 0.5f + stripes[i] * 0.3f) / stripes.size
+                    Patterns.stripe(kit, c, x, top - 2f, bh * (0.5f + 0.15f * stripes[i]), 3.2f, accent.base)
+                }
             }
             Pattern.SPOTS -> for (i in 0 until spots.size / 2) {
-                c.drawCircle(bodyCx + spots[2 * i] * bw * 0.45f, cy + spots[2 * i + 1] * bh * 0.3f - 4f, 3.4f + (i % 3), kit.solid(accent.base))
+                c.drawCircle(bodyCx + spots[2 * i] * bw * 0.45f, cy + spots[2 * i + 1] * bh * 0.3f - 4f, 3.2f + (i % 3) * 0.9f, kit.solid(accent.base))
+            }
+            Pattern.PATCHES -> {
+                val p = kit.solid(accent.base)
+                for (i in 0 until 7) {
+                    val px = bodyCx - bw * 0.4f + (i % 4) * bw * 0.25f + spots[2 * i] * 4f
+                    val py = cy - bh * 0.22f + (i / 4) * bh * 0.38f + spots[2 * i + 1] * 3f
+                    kit.ovalC(c, px, py, bw * 0.09f, bh * 0.14f, p)
+                }
             }
             Pattern.PANDA -> {
                 c.save(); c.rotate(-8f, bodyCx, cy)
@@ -221,15 +335,20 @@ class QuadrupedRenderer(look: Look) : PetRenderer(look) {
                 c.drawRect(kit.rect, kit.solid(accent.base))
                 c.restore()
             }
-            Pattern.NONE -> Unit
+            Pattern.NONE, Pattern.BANDS -> Unit
         }
     }
 
     private fun headPattern(c: Canvas, cx: Float, cy: Float) {
-        if (look.pattern == Pattern.STRIPES) {
+        if (look.pattern == Pattern.STRIPES && !look.has(POUCH_STRIPES)) {
             for (i in 0 until 3) {
                 Patterns.stripe(kit, c, cx - hr * 0.3f + i * hr * 0.24f, cy - hr * 0.98f, hr * (0.42f - i * 0.06f), 2.4f, accent.base)
             }
+        }
+        if (look.has(MASK)) {
+            c.save(); c.rotate(-8f, cx, cy)
+            kit.ovalC(c, cx + hr * 0.15f, cy - hr * 0.08f, hr * 0.85f, hr * 0.24f, kit.solid(accent.base))
+            c.restore()
         }
     }
 }

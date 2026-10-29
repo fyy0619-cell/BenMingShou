@@ -44,6 +44,7 @@ class TheropodRenderer(look: Look) : PetRenderer(look) {
         kit.rect.set(bodyCx - bw / 2f, bodyCy - bh / 2f, bodyCx + bw / 2f, bodyCy + bh / 2f)
         bodyPath.addOval(kit.rect, Path.Direction.CW)
         if (look.has(BACK_SPIKES)) spikes(c, bodyCx, bodyCy - bh / 2f)
+        if (look.has(Feature.SAIL)) sail(c, bodyCx, bodyCy - bh * 0.3f)
         c.drawPath(bodyPath, kit.shaded(base, bodyCy - bh / 2f, bodyCy + bh / 2f))
         c.save()
         c.clipPath(bodyPath)
@@ -91,11 +92,15 @@ class TheropodRenderer(look: Look) : PetRenderer(look) {
 
     private fun head(c: Canvas, cx: Float, cy: Float) {
         if (look.has(FEATHERS)) feathers(c, cx - hr * 0.7f, cy - hr * 0.55f, 3, 200f)
+        if (look.has(Feature.CREST)) crest(c, cx, cy - hr * 0.7f)
+        val longSnout = look.has(Feature.LONG_SNOUT)
+        val top = cy - hr * (if (longSnout) 0.6f else 0.78f)
+        val bottom = cy + hr * (if (longSnout) 0.42f else 0.62f)
         val l = cx - hr * 0.9f
-        val r = cx + hr * 1.15f * look.snout
-        kit.roundRect(c, l, cy - hr * 0.78f, r, cy + hr * 0.62f, hr * 0.62f, kit.shaded(base, cy - hr, cy + hr))
+        val r = cx + hr * 1.15f * look.snout * (if (longSnout) 1.3f else 1f)
+        kit.roundRect(c, l, top, r, bottom, (bottom - top) * 0.45f, kit.shaded(base, top, bottom))
         // lower jaw, a lighter band under the mouth line
-        kit.roundRect(c, l + hr * 0.3f, cy + hr * 0.12f, r - hr * 0.08f, cy + hr * 0.62f, hr * 0.32f, kit.solid(belly.base))
+        kit.roundRect(c, l + hr * 0.3f, cy + hr * 0.12f, r - hr * 0.08f, bottom, hr * 0.28f, kit.solid(belly.base))
         val st = kit.stroke
         st.strokeWidth = hr * 0.05f; st.color = base.deep; st.shader = null
         val p = kit.path
@@ -119,6 +124,34 @@ class TheropodRenderer(look: Look) : PetRenderer(look) {
         kit.sheen(c, cx, cy - hr * 0.1f, hr * 1.05f, hr * 0.7f)
         kit.eye(c, cx + hr * 0.12f, cy - hr * 0.3f, hr * 0.12f, blink, eyeMode, look.palette.eye)
         kit.blush(c, cx + hr * 0.02f, cy - hr * 0.02f, hr * 0.15f)
+    }
+
+    private fun sail(c: Canvas, cx: Float, y: Float) {
+        val p = kit.path
+        val w = bw * 0.55f
+        val h = bh * 0.95f
+        p.rewind()
+        p.moveTo(cx - w, y + 4f)
+        p.cubicTo(cx - w * 0.7f, y - h, cx + w * 0.5f, y - h * 1.05f, cx + w * 0.8f, y + 4f)
+        p.close()
+        c.drawPath(p, kit.shaded(accent, y - h, y))
+        kit.stroke.strokeWidth = 1.6f; kit.stroke.color = accent.deep; kit.stroke.shader = null
+        for (i in -2..2) {
+            val x = cx + i * w * 0.28f
+            c.drawLine(x, y, x + i * 2f, y - h * (0.62f - kotlin.math.abs(i) * 0.1f), kit.stroke)
+        }
+    }
+
+    private fun crest(c: Canvas, cx: Float, y: Float) {
+        val p = kit.path
+        p.rewind()
+        for (i in 0..1) {
+            val ox = cx - hr * 0.2f + i * hr * 0.35f
+            p.moveTo(ox - hr * 0.2f, y + hr * 0.25f)
+            p.quadTo(ox, y - hr * 0.55f, ox + hr * 0.42f, y + hr * 0.2f)
+            p.close()
+        }
+        c.drawPath(p, kit.solid(accent.base))
     }
 
     private fun spikes(c: Canvas, cx: Float, top: Float) {

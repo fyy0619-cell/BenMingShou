@@ -95,9 +95,24 @@ object Tails {
             }
             Tail.BUSHY -> {
                 c.save()
-                c.rotate(-35f + sway * 10f, x, y)
-                kit.oval(c, x - size * 0.75f, y - size * 0.2f, x + size * 0.05f, y + size * 0.2f, kit.shaded(tone, y - size * 0.2f, y + size * 0.2f))
-                kit.oval(c, x - size * 0.78f, y - size * 0.14f, x - size * 0.48f, y + size * 0.14f, kit.solid(tip.base))
+                c.rotate(-35f + sway * 10f - curl * 25f, x, y)
+                val clip = kit.path2
+                clip.rewind()
+                kit.rect.set(x - size * 0.75f, y - size * 0.2f, x + size * 0.05f, y + size * 0.2f)
+                clip.addOval(kit.rect, Path.Direction.CW)
+                c.drawPath(clip, kit.shaded(tone, y - size * 0.2f, y + size * 0.2f))
+                c.save()
+                c.clipPath(clip)
+                if (bands) {
+                    for (i in 0 until 3) {
+                        val bx = x - size * (0.18f + i * 0.2f)
+                        kit.rect.set(bx - size * 0.05f, y - size * 0.3f, bx + size * 0.04f, y + size * 0.3f)
+                        c.drawRect(kit.rect, kit.solid(tip.base))
+                    }
+                } else {
+                    kit.oval(c, x - size * 0.78f, y - size * 0.14f, x - size * 0.48f, y + size * 0.14f, kit.solid(tip.base))
+                }
+                c.restore()
                 c.restore()
             }
             Tail.THICK -> {

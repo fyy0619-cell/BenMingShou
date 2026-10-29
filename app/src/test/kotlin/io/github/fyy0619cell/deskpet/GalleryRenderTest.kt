@@ -10,6 +10,7 @@ import io.github.fyy0619cell.deskpet.render.Rarity
 import io.github.fyy0619cell.deskpet.render.Renderers
 import io.github.fyy0619cell.deskpet.render.Variation
 import io.github.fyy0619cell.deskpet.species.Catalog
+import io.github.fyy0619cell.deskpet.species.Species
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -31,43 +32,76 @@ class GalleryRenderTest {
         Frame("happy", Action.HAPPY, progress = 0.5f),
     )
 
-    private val cell = 360
-    private val scale = cell / 200f
-    private val labelH = 44
+    private val dir = File(System.getProperty("gallery.dir")!!).apply { mkdirs() }
+    private val text = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF5A5262.toInt() }
+    private val pose = Pose()
 
+    private fun drawPet(c: Canvas, sp: Species, f: Frame, x: Float, y: Float, cell: Int, look: io.github.fyy0619cell.deskpet.render.Look = sp.look) {
+        pose.action = f.action; pose.walkPhase = f.walk; pose.progress = f.progress
+        pose.time = f.time; pose.blink = 0f
+        c.save()
+        c.translate(x, y)
+        c.scale(cell / 200f, cell / 200f)
+        Renderers.create(look).draw(c, pose)
+        c.restore()
+    }
+
+    private fun save(bmp: Bitmap, name: String) =
+        File(dir, name).outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+
+    /** One strip of all poses per species, plus one sheet per body plan. */
     @Test
-    fun renderGallery() {
-        val dir = File(System.getProperty("gallery.dir")!!).apply { mkdirs() }
-        val sheet = Bitmap.createBitmap(cell * frames.size, (cell + labelH) * Catalog.all.size, Bitmap.Config.ARGB_8888)
-        val sc = Canvas(sheet)
-        sc.drawColor(BG)
-        val text = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF5A5262.toInt(); textSize = 24f }
-        val pose = Pose()
-
-        Catalog.all.forEachIndexed { row, sp ->
-            val renderer = Renderers.create(sp.look)
-            val rowBmp = Bitmap.createBitmap(cell * frames.size, cell + labelH, Bitmap.Config.ARGB_8888)
-            val rc = Canvas(rowBmp)
-            rc.drawColor(BG)
-            frames.forEachIndexed { i, f ->
-                pose.action = f.action; pose.walkPhase = f.walk; pose.progress = f.progress
-                pose.time = f.time; pose.blink = 0f
-                rc.save()
-                rc.translate(i * cell.toFloat(), labelH.toFloat())
-                rc.scale(scale, scale)
-                renderer.draw(rc, pose)
-                rc.restore()
-                rc.drawText(if (i == 0) "${sp.nameZh}  ${sp.latin}" else f.label, i * cell + 14f, 32f, text)
+    fun renderSpeciesStrips() {
+        val cell = 300
+        val labelH = 40
+        text.textSize = 22f
+        for ((plan, group) in Catalog.all.groupBy { it.look.plan }) {
+            val sheet = Bitmap.createBitmap(cell * frames.size, (cell + labelH) * group.size, Bitmap.Config.ARGB_8888)
+            val sc = Canvas(sheet)
+            sc.drawColor(BG)
+            group.forEachIndexed { row, sp ->
+                val strip = Bitmap.createBitmap(cell * frames.size, cell + labelH, Bitmap.Config.ARGB_8888)
+                val rc = Canvas(strip)
+                rc.drawColor(BG)
+                frames.forEachIndexed { i, f ->
+                    drawPet(rc, sp, f, i * cell.toFloat(), labelH.toFloat(), cell)
+                    rc.drawText(if (i == 0) "${sp.nameZh}  ${sp.latin}" else f.label, i * cell + 12f, 28f, text)
+                }
+                save(strip, "${sp.id}.png")
+                sc.drawBitmap(strip, 0f, row * (cell + labelH).toFloat(), null)
+                strip.recycle()
             }
-            File(dir, "${sp.id}.png").outputStream().use { rowBmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
-            sc.drawBitmap(rowBmp, 0f, row * (cell + labelH).toFloat(), null)
+            save(sheet, "_plan_${plan.name.lowercase()}.png")
+            sheet.recycle()
         }
-        File(dir, "_all.png").outputStream().use { sheet.compress(Bitmap.CompressFormat.PNG, 100, it) }
+    }
+
+    /** Every species idle in a grid: the at-a-glance overview. */
+    @Test
+    fun renderOverview() {
+        val cell = 220
+        val labelH = 30
+        val cols = 9
+        text.textSize = 20f
+        val all = Catalog.all
+        val rows = (all.size + cols - 1) / cols
+        val bmp = Bitmap.createBitmap(cell * cols, (cell + labelH) * rows, Bitmap.Config.ARGB_8888)
+        val c = Canvas(bmp)
+        c.drawColor(BG)
+        all.forEachIndexed { i, sp ->
+            val x = (i % cols) * cell.toFloat()
+            val y = (i / cols) * (cell + labelH).toFloat()
+            drawPet(c, sp, frames[0], x, y + labelH, cell)
+            c.drawText(sp.nameZh, x + 10f, y + 24f, text)
+        }
+        save(bmp, "_overview.png")
     }
 
     @Test
     fun renderVariants() {
-        val dir = File(System.getProperty("gallery.dir")!!).apply { mkdirs() }
+        val cell = 300
+        val labelH = 40
+        text.textSize = 22f
         val ids = listOf("tiger", "panda", "bee", "trex")
         val cols = listOf<Pair<String, Rarity?>>(
             "seed 1" to Rarity.NORMAL, "seed 2" to Rarity.NORMAL, "seed 3" to Rarity.NORMAL,
@@ -76,21 +110,16 @@ class GalleryRenderTest {
         val sheet = Bitmap.createBitmap(cell * cols.size, (cell + labelH) * ids.size, Bitmap.Config.ARGB_8888)
         val sc = Canvas(sheet)
         sc.drawColor(BG)
-        val text = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF5A5262.toInt(); textSize = 24f }
-        val pose = Pose().apply { time = 0.6f }
         ids.forEachIndexed { row, id ->
-            val sp = Catalog.all.first { it.id == id }
+            val sp = Catalog.get(id)
             cols.forEachIndexed { i, (label, rarity) ->
                 val look = Variation.individualize(sp.look, (row * 10 + i + 1).toLong() * 7919L, rarity)
-                sc.save()
-                sc.translate(i * cell.toFloat(), row * (cell + labelH) + labelH.toFloat())
-                sc.scale(scale, scale)
-                Renderers.create(look).draw(sc, pose)
-                sc.restore()
-                sc.drawText("${sp.nameZh} · $label", i * cell + 14f, row * (cell + labelH) + 32f, text)
+                val y = row * (cell + labelH).toFloat()
+                drawPet(sc, sp, frames[0], i * cell.toFloat(), y + labelH, cell, look)
+                sc.drawText("${sp.nameZh} · $label", i * cell + 12f, y + 28f, text)
             }
         }
-        File(dir, "_variants.png").outputStream().use { sheet.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        save(sheet, "_variants.png")
     }
 
     companion object {
