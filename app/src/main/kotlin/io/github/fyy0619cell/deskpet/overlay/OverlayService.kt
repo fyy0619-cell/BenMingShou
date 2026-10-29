@@ -104,13 +104,13 @@ class OverlayService : Service() {
         brain.wanderEnabled = settings.wanderOn
         v.halo = settings.halo
         v.haloPainter.onDarkWallpaper = wallpaperIsDark()
-        val size = (settings.sizeDp * resources.displayMetrics.density).toInt()
-        if (size != params.width) {
+        val (w, h) = windowSize(v)
+        if (w != params.width || h != params.height) {
             trip = null
             if (brain.action == Action.WALK) brain.arrived(SystemClock.uptimeMillis())
-            params.width = size
-            params.height = size
-            val b = bounds(size)
+            params.width = w
+            params.height = h
+            val b = bounds()
             moveTo(b.clampX(params.x.toFloat()), b.clampY(params.y.toFloat()))
         }
         v.invalidate()
@@ -161,10 +161,11 @@ class OverlayService : Service() {
         locomotion = look.locomotion
         voice = adoption.species.voice
         rng = Rng(adoption.seed xor SystemClock.uptimeMillis())
-        val size = (settings.sizeDp * resources.displayMetrics.density).toInt()
-        val b = bounds(size)
+        val v = PetOverlayView(this, look)
+        val (w, h) = windowSize(v)
+        val b = bounds(w, h)
         params = WindowManager.LayoutParams(
-            size, size,
+            w, h,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
@@ -176,7 +177,6 @@ class OverlayService : Service() {
             // Mid-screen by default: lower down it sits on top of the launcher dock.
             y = b.clampY(prefs.getFloat(KEY_Y, b.height * 0.45f)).toInt()
         }
-        val v = PetOverlayView(this, look)
         v.halo = settings.halo
         v.haloPainter.onDarkWallpaper = wallpaperIsDark()
         v.tick = ::onTick
@@ -191,7 +191,13 @@ class OverlayService : Service() {
         brain.start(now)
     }
 
-    private fun bounds(size: Int = params.width): Bounds {
+    /** The chosen pet size describes the full 200-unit box; the window keeps only its painted part. */
+    private fun windowSize(v: PetOverlayView): Pair<Int, Int> {
+        val unit = settings.sizeDp * resources.displayMetrics.density / 200f
+        return (v.content.width() * unit).toInt() to (v.content.height() * unit).toInt()
+    }
+
+    private fun bounds(winW: Int = params.width, winH: Int = params.height): Bounds {
         val density = resources.displayMetrics.density
         val (w, h) = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             wm.currentWindowMetrics.bounds.let { it.width() to it.height() }
@@ -199,7 +205,7 @@ class OverlayService : Service() {
             @Suppress("DEPRECATION")
             android.util.DisplayMetrics().also { wm.defaultDisplay.getRealMetrics(it) }.let { it.widthPixels to it.heightPixels }
         }
-        return Bounds(w, h, (TOP_DP * density).toInt(), size, density)
+        return Bounds(w, h, (TOP_DP * density).toInt(), winW, winH, density)
     }
 
     private fun moveTo(x: Float, y: Float) {

@@ -8,6 +8,9 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.view.Menu
+import android.view.View
+import android.view.Window
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -163,6 +166,11 @@ class MainActivity : ComponentActivity() {
         sound.release()
         super.onDestroy()
     }
+
+    // No options menu exists; without this a MENU key press opens an empty legacy panel
+    // that takes focus and silently swallows every following touch (seen on Android 10).
+    override fun onPreparePanel(featureId: Int, view: View?, menu: Menu): Boolean =
+        featureId != Window.FEATURE_OPTIONS_PANEL && super.onPreparePanel(featureId, view, menu)
 
     // ---- settings ----
 

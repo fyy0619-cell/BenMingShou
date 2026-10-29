@@ -10,7 +10,7 @@ import org.junit.Test
 import kotlin.math.abs
 
 class TripTest {
-    private val b = Bounds(width = 1080, height = 2400, top = 84, size = 360, density = 3f)
+    private val b = Bounds(width = 1080, height = 2400, top = 84, winW = 330, winH = 220, density = 3f)
     private val out = FloatArray(2)
 
     @Test

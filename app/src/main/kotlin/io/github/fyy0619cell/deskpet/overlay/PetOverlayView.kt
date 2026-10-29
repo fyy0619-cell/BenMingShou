@@ -3,10 +3,12 @@ package io.github.fyy0619cell.deskpet.overlay
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.RectF
 import android.os.SystemClock
 import android.view.Choreographer
 import android.view.View
 import io.github.fyy0619cell.deskpet.render.Action
+import io.github.fyy0619cell.deskpet.render.ContentBounds
 import io.github.fyy0619cell.deskpet.render.Halo
 import io.github.fyy0619cell.deskpet.render.Look
 import io.github.fyy0619cell.deskpet.render.Pose
@@ -19,6 +21,9 @@ import io.github.fyy0619cell.deskpet.render.Renderers
 @SuppressLint("ViewConstructor")
 class PetOverlayView(context: Context, look: Look) : View(context) {
     private val renderer = Renderers.create(look)
+
+    /** The part of the 200-unit box this pet ever paints; the window shows only this. */
+    val content: RectF = ContentBounds.measure(renderer)
     val pose = Pose()
     var facingRight = true
     var tick: ((Long) -> Unit)? = null
@@ -54,10 +59,11 @@ class PetOverlayView(context: Context, look: Look) : View(context) {
     }
 
     override fun onDraw(canvas: Canvas) {
-        val s = width / 200f
+        val s = width / content.width()
         canvas.save()
         if (!facingRight) canvas.scale(-1f, 1f, width / 2f, height / 2f)
         canvas.scale(s, s)
+        canvas.translate(-content.left, -content.top)
         if (halo) haloPainter.draw(canvas, renderer, pose)
         renderer.draw(canvas, pose)
         canvas.restore()

@@ -24,9 +24,10 @@ class Trip(
     }
 }
 
-class Bounds(val width: Int, val height: Int, val top: Int, val size: Int, val density: Float) {
-    val maxX: Float get() = (width - size).coerceAtLeast(0).toFloat()
-    val maxY: Float get() = (height - size).coerceAtLeast(top).toFloat()
+/** Screen [width]×[height] and the pet window [winW]×[winH], all in px. */
+class Bounds(val width: Int, val height: Int, val top: Int, val winW: Int, val winH: Int, val density: Float) {
+    val maxX: Float get() = (width - winW).coerceAtLeast(0).toFloat()
+    val maxY: Float get() = (height - winH).coerceAtLeast(top).toFloat()
 
     fun clampX(x: Float) = x.coerceIn(0f, maxX)
     fun clampY(y: Float) = y.coerceIn(top.toFloat(), maxY)
