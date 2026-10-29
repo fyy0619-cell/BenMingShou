@@ -3,7 +3,8 @@ package io.github.fyy0619cell.deskpet.pet
 import io.github.fyy0619cell.deskpet.render.Action
 import io.github.fyy0619cell.deskpet.render.Rng
 
-enum class BrainEvent { FELL_ASLEEP, WOKE, TAPPED, WANDER, ARRIVED, FED }
+/** WOKE = woken by a tap (worth a sound); GREETED = woken by unlocking the phone (silent). */
+enum class BrainEvent { FELL_ASLEEP, WOKE, GREETED, TAPPED, WANDER, ARRIVED, FED }
 
 /**
  * What the pet is doing, driven purely by timestamps (ms) so it can be unit-tested.
@@ -83,13 +84,19 @@ class PetBrain(seed: Long, var wanderEnabled: Boolean = true) {
         if (!asleep) return
         touch(now)
         react(Action.HAPPY, HAPPY_MS, now)
-        emit(BrainEvent.WOKE)
+        emit(BrainEvent.GREETED)
     }
 
     fun feed(now: Long) {
         touch(now)
         react(Action.EAT, EAT_MS, now)
         emit(BrainEvent.FED)
+    }
+
+    /** A happy hop with no event, e.g. after being cleaned from the app. */
+    fun cheer(now: Long) {
+        touch(now)
+        react(Action.HAPPY, HAPPY_MS, now)
     }
 
     /** Picked up by a drag: stop whatever it was doing. */

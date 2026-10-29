@@ -11,7 +11,10 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
 import io.github.fyy0619cell.deskpet.pet.Adoption
+import io.github.fyy0619cell.deskpet.pet.Stats
 import io.github.fyy0619cell.deskpet.quiz.Matcher
+import io.github.fyy0619cell.deskpet.share.ShareCard
+import io.github.fyy0619cell.deskpet.ui.HomeActions
 import io.github.fyy0619cell.deskpet.quiz.Questions
 import io.github.fyy0619cell.deskpet.render.Rarity
 import io.github.fyy0619cell.deskpet.render.Variation
@@ -86,12 +89,19 @@ class ScreenshotTest {
     @Test fun home() {
         val adoption = Adoption("red_panda", 7L, "栗子", 0L, "0,0,0,0,0,0")
         val accent = Color(accentFor(adoption.look))
-        shoot("6_home", accent) { HomeScreen(adoption, overlayOn = false, onToggleOverlay = {}, now = 3L * 86_400_000L, animate = false) }
+        val stats = Stats(hunger = 64f, clean = 22f, mood = 81f, xp = 70)
+        shoot("6_home", accent) { HomeScreen(adoption, stats, overlayOn = false, actions = HomeActions(), now = 3L * 86_400_000L, animate = false) }
     }
 
     @Test fun homeOverlayOn() {
         val adoption = Adoption("great_white", 7L, "可乐", 0L, "0,0,0,0,0,0")
         val accent = Color(accentFor(adoption.look))
-        shoot("6b_home_on", accent) { HomeScreen(adoption, overlayOn = true, onToggleOverlay = {}, now = 0L, animate = false) }
+        shoot("6b_home_on", accent) { HomeScreen(adoption, Stats(), overlayOn = true, actions = HomeActions(), now = 0L, animate = false) }
+    }
+
+    @Test fun shareCard() {
+        val adoption = Adoption("triceratops", 7L, "年糕", 0L, "3,0,0,0,3,1")
+        val bmp = ShareCard.render(adoption, accentFor(adoption.look), "DeskPet")
+        File(dir, "7_share_card.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
 }

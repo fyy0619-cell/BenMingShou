@@ -68,10 +68,11 @@ class PetBrainTest {
     fun unlockGreetingWakesOnlyASleepingPet() {
         val b = brain()
         b.greet(1000L)
-        assertTrue(events.none { it.second == BrainEvent.WOKE })
+        assertTrue(events.none { it.second == BrainEvent.GREETED })
         run(b, 5 * 60_000L)
         b.greet(now)
-        assertEquals(BrainEvent.WOKE, events.last().second)
+        assertEquals(BrainEvent.GREETED, events.last().second)
+        assertFalse(b.asleep)
     }
 
     @Test

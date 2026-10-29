@@ -32,11 +32,17 @@ import androidx.core.content.ContextCompat
 import io.github.fyy0619cell.deskpet.MainActivity
 import io.github.fyy0619cell.deskpet.R
 import io.github.fyy0619cell.deskpet.pet.Adoption
+import io.github.fyy0619cell.deskpet.pet.BrainEvent
 import io.github.fyy0619cell.deskpet.pet.PetBrain
 import io.github.fyy0619cell.deskpet.pet.PetStore
+import io.github.fyy0619cell.deskpet.pet.StatsMath
+import io.github.fyy0619cell.deskpet.pet.StatsStore
 import io.github.fyy0619cell.deskpet.render.Action
 import io.github.fyy0619cell.deskpet.render.Locomotion
 import io.github.fyy0619cell.deskpet.render.Rng
+import io.github.fyy0619cell.deskpet.sound.SoundPlayer
+import io.github.fyy0619cell.deskpet.species.Voice
+import io.github.fyy0619cell.deskpet.pet.Settings as PetSettings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlin.math.abs
@@ -46,6 +52,7 @@ class OverlayService : Service() {
     private lateinit var brain: PetBrain
     private lateinit var params: WindowManager.LayoutParams
     private lateinit var locomotion: Locomotion
+    private lateinit var voice: Voice
     private lateinit var rng: Rng
     private var view: PetOverlayView? = null
     private var trip: Trip? = null
@@ -54,6 +61,9 @@ class OverlayService : Service() {
     private var lastTick = 0L
     private val handler = Handler(Looper.getMainLooper())
     private val prefs by lazy { getSharedPreferences("overlay", MODE_PRIVATE) }
+    private val sound by lazy { SoundPlayer(this) }
+    private val stats by lazy { StatsStore(this) }
+    private val settings by lazy { PetSettings(this) }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -74,11 +84,28 @@ class OverlayService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == ACTION_STOP) {
-            stopSelf()
-            return START_NOT_STICKY
+        val now = SystemClock.uptimeMillis()
+        when (intent?.action) {
+            ACTION_STOP -> {
+                stopSelf()
+                return START_NOT_STICKY
+            }
+            ACTION_FEED -> if (view != null) { trip = null; brain.feed(now) }
+            ACTION_CLEAN -> if (view != null) { trip = null; brain.cheer(now); sound.voice(voice) }
+            ACTION_SETTINGS -> if (view != null) brain.wanderEnabled = settings.wanderOn
         }
         return START_STICKY
+    }
+
+    private fun onBrainEvent(e: BrainEvent) {
+        when (e) {
+            BrainEvent.TAPPED, BrainEvent.WOKE -> {
+                sound.voice(voice)
+                stats.update { s, now -> StatsMath.pet(s, now) }
+            }
+            BrainEvent.FED -> sound.nom()
+            else -> Unit
+        }
     }
 
     override fun onDestroy() {
@@ -90,6 +117,7 @@ class OverlayService : Service() {
             runCatching { wm.removeView(v) }
         }
         view = null
+        sound.release()
         super.onDestroy()
     }
 
@@ -107,6 +135,7 @@ class OverlayService : Service() {
     private fun addOverlay(adoption: Adoption) {
         val look = adoption.look
         locomotion = look.locomotion
+        voice = adoption.species.voice
         rng = Rng(adoption.seed xor SystemClock.uptimeMillis())
         val size = (SIZE_DP * resources.displayMetrics.density).toInt()
         val b = bounds(size)
@@ -130,7 +159,8 @@ class OverlayService : Service() {
         val now = SystemClock.uptimeMillis()
         t0 = now
         lastTick = now
-        brain = PetBrain(adoption.seed)
+        brain = PetBrain(adoption.seed, wanderEnabled = settings.wanderOn)
+        brain.onEvent = ::onBrainEvent
         brain.start(now)
     }
 
@@ -320,5 +350,14 @@ class OverlayService : Service() {
         fun stop(context: Context) {
             context.stopService(Intent(context, OverlayService::class.java))
         }
+
+        /** Forward an in-app action to the desktop pet; no-op when it is not on screen. */
+        fun send(context: Context, action: String) {
+            if (_running.value) context.startService(Intent(context, OverlayService::class.java).setAction(action))
+        }
+
+        const val ACTION_FEED = "io.github.fyy0619cell.deskpet.FEED"
+        const val ACTION_CLEAN = "io.github.fyy0619cell.deskpet.CLEAN"
+        const val ACTION_SETTINGS = "io.github.fyy0619cell.deskpet.SETTINGS"
     }
 }

@@ -19,6 +19,7 @@ object Palette {
     val Muted = Color(0xFF8C8592)
     val Hairline = Color(0x1F231E29)
     val Gold = Color(0xFFB98A2E)
+    val Warn = Color(0xFFC0634F)
 }
 
 /** The user's pet tints the whole app once adopted; before that everything is ink. */
