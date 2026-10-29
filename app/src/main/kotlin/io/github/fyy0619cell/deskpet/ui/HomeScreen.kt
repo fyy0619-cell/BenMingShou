@@ -10,6 +10,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
@@ -21,7 +22,13 @@ import io.github.fyy0619cell.deskpet.ui.theme.Palette
 import java.util.concurrent.TimeUnit
 
 @Composable
-fun HomeScreen(adoption: Adoption, now: Long = System.currentTimeMillis(), animate: Boolean = true) {
+fun HomeScreen(
+    adoption: Adoption,
+    overlayOn: Boolean,
+    onToggleOverlay: () -> Unit,
+    now: Long = System.currentTimeMillis(),
+    animate: Boolean = true,
+) {
     val look = remember(adoption) { adoption.look }
     val sp = adoption.species
     val days = TimeUnit.MILLISECONDS.toDays(now - adoption.adoptedAt) + 1
@@ -31,8 +38,16 @@ fun HomeScreen(adoption: Adoption, now: Long = System.currentTimeMillis(), anima
         Text(adoption.name, style = MaterialTheme.typography.displayMedium, color = Palette.Ink)
         Text("${sp.nameZh} · ${sp.latin}", fontStyle = FontStyle.Italic, fontSize = 14.sp, color = Palette.Muted)
         Spacer(Modifier.weight(0.5f))
-        PetCanvas(look, Modifier.fillMaxWidth().height(300.dp), animate = animate)
+        PetCanvas(look, Modifier.fillMaxWidth().height(300.dp), animate = animate && !overlayOn)
         Spacer(Modifier.weight(1f))
+        Text(
+            if (overlayOn) "${adoption.name}正在桌面上。点它互动，按住拖动，长按回到这里。" else "放到桌面后，它会在你用手机时陪着你。",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Palette.Muted,
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+        )
+        Spacer(Modifier.height(16.dp))
+        PillButton(if (overlayOn) "把${adoption.name}收回来" else "让${adoption.name}去桌面", onToggleOverlay)
     }
 }
 

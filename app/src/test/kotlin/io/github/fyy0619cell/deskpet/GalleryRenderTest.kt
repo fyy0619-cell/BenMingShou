@@ -122,6 +122,35 @@ class GalleryRenderTest {
         save(sheet, "_variants.png")
     }
 
+    /** Does the halo help pale pets on pale wallpapers without looking heavy on dark ones? */
+    @Test
+    fun renderHaloComparison() {
+        val cell = 220
+        val ids = listOf("polar_bear", "chicken", "penguin", "moon_jelly", "swallowtail")
+        val bgs = listOf(Color.WHITE, Color.rgb(226, 232, 240), Color.rgb(34, 38, 48))
+        val bmp = Bitmap.createBitmap(cell * bgs.size * 2, cell * ids.size, Bitmap.Config.ARGB_8888)
+        val c = Canvas(bmp)
+        val halo = io.github.fyy0619cell.deskpet.render.Halo()
+        val p = Paint()
+        ids.forEachIndexed { row, id ->
+            val renderer = Renderers.create(Catalog.get(id).look)
+            for (col in 0 until bgs.size * 2) {
+                val x = col * cell.toFloat()
+                val y = row * cell.toFloat()
+                p.color = bgs[col / 2]
+                c.drawRect(x, y, x + cell, y + cell, p)
+                pose.action = Action.IDLE; pose.time = 0.6f; pose.blink = 0f
+                c.save()
+                c.translate(x, y)
+                c.scale(cell / 200f, cell / 200f)
+                if (col % 2 == 1) halo.draw(c, renderer, pose)
+                renderer.draw(c, pose)
+                c.restore()
+            }
+        }
+        save(bmp, "_halo.png")
+    }
+
     companion object {
         val BG = Color.rgb(246, 244, 241)
     }

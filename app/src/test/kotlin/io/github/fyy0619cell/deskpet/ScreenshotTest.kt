@@ -8,7 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.captureToImage
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
 import io.github.fyy0619cell.deskpet.pet.Adoption
 import io.github.fyy0619cell.deskpet.quiz.Matcher
@@ -86,6 +86,12 @@ class ScreenshotTest {
     @Test fun home() {
         val adoption = Adoption("red_panda", 7L, "栗子", 0L, "0,0,0,0,0,0")
         val accent = Color(accentFor(adoption.look))
-        shoot("6_home", accent) { HomeScreen(adoption, now = 3L * 86_400_000L, animate = false) }
+        shoot("6_home", accent) { HomeScreen(adoption, overlayOn = false, onToggleOverlay = {}, now = 3L * 86_400_000L, animate = false) }
+    }
+
+    @Test fun homeOverlayOn() {
+        val adoption = Adoption("great_white", 7L, "可乐", 0L, "0,0,0,0,0,0")
+        val accent = Color(accentFor(adoption.look))
+        shoot("6b_home_on", accent) { HomeScreen(adoption, overlayOn = true, onToggleOverlay = {}, now = 0L, animate = false) }
     }
 }
