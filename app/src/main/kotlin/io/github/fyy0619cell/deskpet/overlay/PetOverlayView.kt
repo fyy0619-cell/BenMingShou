@@ -23,8 +23,7 @@ class PetOverlayView(context: Context, look: Look) : View(context) {
     var facingRight = true
     var tick: ((Long) -> Unit)? = null
     var halo = true
-
-    private val haloPainter = Halo()
+    val haloPainter = Halo()
     private val choreographer = Choreographer.getInstance()
     private var running = false
     private val frame: Choreographer.FrameCallback = object : Choreographer.FrameCallback {

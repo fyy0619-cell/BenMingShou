@@ -26,6 +26,12 @@ import io.github.fyy0619cell.deskpet.ui.quiz.NamingScreen
 import io.github.fyy0619cell.deskpet.ui.quiz.QuestionScreen
 import io.github.fyy0619cell.deskpet.ui.quiz.RevealScreen
 import io.github.fyy0619cell.deskpet.ui.quiz.SeekingScreen
+import io.github.fyy0619cell.deskpet.ui.settings.KeepAliveScreen
+import io.github.fyy0619cell.deskpet.ui.settings.PrivacyConsentScreen
+import io.github.fyy0619cell.deskpet.ui.settings.PrivacyPolicyScreen
+import io.github.fyy0619cell.deskpet.ui.settings.SettingsActions
+import io.github.fyy0619cell.deskpet.ui.settings.SettingsScreen
+import io.github.fyy0619cell.deskpet.ui.settings.SettingsState
 import io.github.fyy0619cell.deskpet.ui.theme.DeskTheme
 import io.github.fyy0619cell.deskpet.ui.theme.Palette
 import org.junit.Rule
@@ -99,9 +105,46 @@ class ScreenshotTest {
         shoot("6b_home_on", accent) { HomeScreen(adoption, Stats(), overlayOn = true, actions = HomeActions(), now = 0L, animate = false) }
     }
 
+    @Test fun consent() = shoot("0_consent") { PrivacyConsentScreen({}, {}, {}) }
+
+    @Test fun settings() {
+        val adoption = Adoption("red_panda", 7L, "栗子", 0L, "0,0,0,0,0,0")
+        shoot("8_settings", Color(accentFor(adoption.look))) {
+            SettingsScreen(SettingsState(1, true, true, false, false), "0.4.0", SettingsActions())
+        }
+    }
+
+    @Test fun keepAlive() = shoot("9_keep_alive") { KeepAliveScreen("Xiaomi", {}, {}, {}) }
+
+    @Test fun privacyPolicy() = shoot("10_privacy") { PrivacyPolicyScreen {} }
+
+    @Test fun launcherIcon() {
+        val ctx = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+        val px = 432
+        val bmp = Bitmap.createBitmap(px * 2, px, Bitmap.Config.ARGB_8888)
+        val c = android.graphics.Canvas(bmp)
+        c.drawColor(0xFFDDE3EA.toInt())
+        val fg = ctx.getDrawable(R.drawable.ic_launcher_foreground)!!
+        for (round in 0..1) {
+            c.save()
+            c.translate(round * px.toFloat(), 0f)
+            val clip = android.graphics.Path().apply {
+                if (round == 1) addCircle(px / 2f, px / 2f, px * 0.3f, android.graphics.Path.Direction.CW)
+                else addRoundRect(px * 0.2f, px * 0.2f, px * 0.8f, px * 0.8f, px * 0.13f, px * 0.13f, android.graphics.Path.Direction.CW)
+            }
+            c.clipPath(clip)
+            c.scale(1.2f, 1.2f, px / 2f, px / 2f)
+            c.drawColor(0xFF231E29.toInt())
+            fg.setBounds(0, 0, px, px)
+            fg.draw(c)
+            c.restore()
+        }
+        File(dir, "11_icon.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+    }
+
     @Test fun shareCard() {
         val adoption = Adoption("triceratops", 7L, "年糕", 0L, "3,0,0,0,3,1")
-        val bmp = ShareCard.render(adoption, accentFor(adoption.look), "DeskPet")
+        val bmp = ShareCard.render(adoption, accentFor(adoption.look), "本命兽")
         File(dir, "7_share_card.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
 }

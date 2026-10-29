@@ -6,6 +6,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.app.WallpaperManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -87,15 +88,38 @@ class OverlayService : Service() {
         val now = SystemClock.uptimeMillis()
         when (intent?.action) {
             ACTION_STOP -> {
+                settings.overlayWanted = false
                 stopSelf()
                 return START_NOT_STICKY
             }
             ACTION_FEED -> if (view != null) { trip = null; brain.feed(now) }
             ACTION_CLEAN -> if (view != null) { trip = null; brain.cheer(now); sound.voice(voice) }
-            ACTION_SETTINGS -> if (view != null) brain.wanderEnabled = settings.wanderOn
+            ACTION_SETTINGS -> if (view != null) applySettings()
         }
         return START_STICKY
     }
+
+    private fun applySettings() {
+        val v = view ?: return
+        brain.wanderEnabled = settings.wanderOn
+        v.halo = settings.halo
+        v.haloPainter.onDarkWallpaper = wallpaperIsDark()
+        val size = (settings.sizeDp * resources.displayMetrics.density).toInt()
+        if (size != params.width) {
+            trip = null
+            if (brain.action == Action.WALK) brain.arrived(SystemClock.uptimeMillis())
+            params.width = size
+            params.height = size
+            val b = bounds(size)
+            moveTo(b.clampX(params.x.toFloat()), b.clampY(params.y.toFloat()))
+        }
+        v.invalidate()
+    }
+
+    private fun wallpaperIsDark(): Boolean = runCatching {
+        WallpaperManager.getInstance(this).getWallpaperColors(WallpaperManager.FLAG_SYSTEM)
+            ?.primaryColor?.luminance()?.let { it < 0.4f } ?: false
+    }.getOrDefault(false)
 
     private fun onBrainEvent(e: BrainEvent) {
         when (e) {
@@ -137,7 +161,7 @@ class OverlayService : Service() {
         locomotion = look.locomotion
         voice = adoption.species.voice
         rng = Rng(adoption.seed xor SystemClock.uptimeMillis())
-        val size = (SIZE_DP * resources.displayMetrics.density).toInt()
+        val size = (settings.sizeDp * resources.displayMetrics.density).toInt()
         val b = bounds(size)
         params = WindowManager.LayoutParams(
             size, size,
@@ -152,6 +176,8 @@ class OverlayService : Service() {
             y = b.clampY(prefs.getFloat(KEY_Y, b.height * 0.62f)).toInt()
         }
         val v = PetOverlayView(this, look)
+        v.halo = settings.halo
+        v.haloPainter.onDarkWallpaper = wallpaperIsDark()
         v.tick = ::onTick
         v.setOnTouchListener(touch)
         wm.addView(v, params)
@@ -336,7 +362,6 @@ class OverlayService : Service() {
         const val ACTION_STOP = "io.github.fyy0619cell.deskpet.STOP_OVERLAY"
         private const val CHANNEL = "overlay"
         private const val NOTIFICATION_ID = 7
-        private const val SIZE_DP = 120
         private const val TOP_DP = 28
         private const val KEY_X = "x"
         private const val KEY_Y = "y"
@@ -344,10 +369,13 @@ class OverlayService : Service() {
         private val _running = MutableStateFlow(false)
         val running: StateFlow<Boolean> = _running
 
-        fun start(context: Context) =
+        fun start(context: Context) {
+            PetSettings(context).overlayWanted = true
             ContextCompat.startForegroundService(context, Intent(context, OverlayService::class.java))
+        }
 
         fun stop(context: Context) {
+            PetSettings(context).overlayWanted = false
             context.stopService(Intent(context, OverlayService::class.java))
         }
 

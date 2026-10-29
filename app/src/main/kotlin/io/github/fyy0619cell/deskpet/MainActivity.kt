@@ -11,6 +11,7 @@ import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -44,16 +45,26 @@ import io.github.fyy0619cell.deskpet.ui.HomeActions
 import io.github.fyy0619cell.deskpet.ui.HomeScreen
 import io.github.fyy0619cell.deskpet.ui.accentFor
 import io.github.fyy0619cell.deskpet.ui.quiz.QuizFlow
+import io.github.fyy0619cell.deskpet.ui.settings.KeepAliveScreen
+import io.github.fyy0619cell.deskpet.ui.settings.PrivacyConsentScreen
+import io.github.fyy0619cell.deskpet.ui.settings.PrivacyPolicyScreen
+import io.github.fyy0619cell.deskpet.ui.settings.SettingsActions
+import io.github.fyy0619cell.deskpet.ui.settings.SettingsScreen
+import io.github.fyy0619cell.deskpet.ui.settings.SettingsState
 import io.github.fyy0619cell.deskpet.ui.theme.DeskTheme
 import io.github.fyy0619cell.deskpet.ui.theme.Palette
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import io.github.fyy0619cell.deskpet.pet.Settings as PetSettings
+
+private enum class Screen { MAIN, SETTINGS, KEEP_ALIVE, PRIVACY }
 
 class MainActivity : ComponentActivity() {
     private lateinit var store: PetStore
     private lateinit var statsStore: StatsStore
+    private lateinit var prefs: PetSettings
     private val sound by lazy { SoundPlayer(this) }
 
     private var adoption by mutableStateOf<Adoption?>(null)
@@ -61,6 +72,9 @@ class MainActivity : ComponentActivity() {
     private var reaction by mutableStateOf<Action?>(null)
     private var reactionId by mutableLongStateOf(0L)
     private var showOverlayGuide by mutableStateOf(false)
+    private var screen by mutableStateOf(Screen.MAIN)
+    private var consented by mutableStateOf(false)
+    private var settingsState by mutableStateOf(SettingsState(1, true, true, true, false))
     private var pendingOverlayStart = false
 
     private val notificationPermission =
@@ -72,13 +86,23 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge(statusBarStyle = light, navigationBarStyle = light)
         store = PetStore(this)
         statsStore = StatsStore(this)
+        prefs = PetSettings(this)
         adoption = store.adoption()
-        val actions = HomeActions(
-            onTapPet = ::tapPet,
-            onFeed = ::feed,
-            onClean = ::clean,
-            onShare = ::share,
-            onToggleOverlay = ::toggleOverlay,
+        consented = prefs.privacyAccepted
+        settingsState = readSettings()
+        val homeActions = HomeActions(
+            onTapPet = ::tapPet, onFeed = ::feed, onClean = ::clean, onShare = ::share,
+            onToggleOverlay = ::toggleOverlay, onSettings = { screen = Screen.SETTINGS },
+        )
+        val settingsActions = SettingsActions(
+            onSize = { changeSetting { size = it } },
+            onWander = { changeSetting { wanderOn = it } },
+            onHalo = { changeSetting { halo = it } },
+            onSound = { changeSetting { soundOn = it } },
+            onAutoStart = { changeSetting { autoStart = it } },
+            onKeepAlive = { screen = Screen.KEEP_ALIVE },
+            onPrivacy = { screen = Screen.PRIVACY },
+            onBack = { screen = Screen.MAIN },
         )
         setContent {
             val overlayOn by OverlayService.running.collectAsState()
@@ -87,24 +111,43 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(reactionId) {
                 if (reaction != null) { delay(1800); reaction = null }
             }
+            BackHandler(enabled = screen != Screen.MAIN) { screen = parentOf(screen) }
             DeskTheme(accent) {
                 Surface(Modifier.fillMaxSize(), color = Palette.Paper) {
                     Box(Modifier.safeDrawingPadding()) {
-                        if (current == null) {
-                            QuizFlow { a ->
+                        when {
+                            screen == Screen.PRIVACY -> PrivacyPolicyScreen { screen = parentOf(Screen.PRIVACY) }
+                            !consented -> PrivacyConsentScreen(
+                                onAgree = { prefs.privacyAccepted = true; consented = true },
+                                onDisagree = { finish() },
+                                onReadPolicy = { screen = Screen.PRIVACY },
+                            )
+                            screen == Screen.SETTINGS -> SettingsScreen(settingsState, versionName(), settingsActions)
+                            screen == Screen.KEEP_ALIVE -> KeepAliveScreen(
+                                Build.MANUFACTURER,
+                                onAppSettings = ::openAppSettings,
+                                onBatterySettings = ::openBatterySettings,
+                                onBack = { screen = Screen.SETTINGS },
+                            )
+                            current == null -> QuizFlow { a ->
                                 if (store.adopt(a)) {
                                     adoption = store.adoption()
                                     stats = statsStore.read()
                                 }
                             }
-                        } else {
-                            HomeScreen(current, stats, overlayOn, actions, reaction)
+                            else -> HomeScreen(current, stats, overlayOn, homeActions, reaction)
                         }
                     }
                     if (showOverlayGuide) OverlayGuide(current?.name ?: "它")
                 }
             }
         }
+    }
+
+    private fun parentOf(s: Screen) = when (s) {
+        Screen.KEEP_ALIVE -> Screen.SETTINGS
+        Screen.PRIVACY -> if (consented) Screen.SETTINGS else Screen.MAIN
+        else -> Screen.MAIN
     }
 
     override fun onResume() {
@@ -120,6 +163,30 @@ class MainActivity : ComponentActivity() {
         sound.release()
         super.onDestroy()
     }
+
+    // ---- settings ----
+
+    private fun readSettings() = SettingsState(prefs.size, prefs.wanderOn, prefs.halo, prefs.soundOn, prefs.autoStart)
+
+    private fun changeSetting(edit: PetSettings.() -> Unit) {
+        prefs.edit()
+        settingsState = readSettings()
+        OverlayService.send(this, OverlayService.ACTION_SETTINGS)
+    }
+
+    private fun versionName(): String =
+        runCatching { packageManager.getPackageInfo(packageName, 0).versionName }.getOrNull() ?: ""
+
+    private fun openAppSettings() {
+        startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName")))
+    }
+
+    private fun openBatterySettings() {
+        runCatching { startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }
+            .onFailure { openAppSettings() }
+    }
+
+    // ---- care ----
 
     private fun react(a: Action) {
         reaction = a
@@ -167,6 +234,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // ---- overlay ----
+
     private fun toggleOverlay() {
         when {
             OverlayService.running.value -> OverlayService.stop(this)
@@ -189,8 +258,8 @@ class MainActivity : ComponentActivity() {
             title = { Text("需要一个权限") },
             text = {
                 Text(
-                    "让${name}待在桌面上，需要允许「显示在其他应用上层」。接下来会打开系统设置，找到本应用并打开开关。\n\n" +
-                        "如果开关是灰色、点不动：进入 系统设置 → 应用 → 本应用，点右上角「⋮」选择「允许受限制的设置」，再回来打开。",
+                    "让${name}待在桌面上，需要允许「显示在其他应用上层」。接下来会打开系统设置，找到「本命兽」并打开开关。\n\n" +
+                        "如果开关是灰色、点不动：进入 系统设置 → 应用 → 本命兽，点右上角「⋮」选择「允许受限制的设置」，再回来打开。",
                 )
             },
             confirmButton = {

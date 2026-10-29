@@ -45,6 +45,7 @@ class HomeActions(
     val onClean: () -> Unit = {},
     val onShare: () -> Unit = {},
     val onToggleOverlay: () -> Unit = {},
+    val onSettings: () -> Unit = {},
 )
 
 @Composable
@@ -62,8 +63,12 @@ fun HomeScreen(
     val days = TimeUnit.MILLISECONDS.toDays(now - adoption.adoptedAt) + 1
     val level = StatsMath.level(stats.xp)
     Column(Modifier.fillMaxSize().padding(horizontal = 28.dp, vertical = 24.dp)) {
-        Eyebrow("陪伴第 $days 天 · Lv.$level")
-        Spacer(Modifier.height(14.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Eyebrow("陪伴第 $days 天 · Lv.$level")
+            Spacer(Modifier.weight(1f))
+            QuietButton("设置", actions.onSettings)
+        }
+        Spacer(Modifier.height(6.dp))
         Text(adoption.name, style = MaterialTheme.typography.displayMedium, color = Palette.Ink)
         Text("${sp.nameZh} · ${sp.latin}", fontStyle = FontStyle.Italic, fontSize = 14.sp, color = Palette.Muted)
         Spacer(Modifier.height(6.dp))

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- An egg about to hatch: nobody knows which animal is inside until the quiz. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#F6F4F1"
+        android:pathData="M54,32C64.5,32 72.5,46.5 72.5,60C72.5,71.5 64.2,79.5 54,79.5C43.8,79.5 35.5,71.5 35.5,60C35.5,46.5 43.5,32 54,32Z" />
+    <path
+        android:fillColor="#E6E0D8"
+        android:pathData="M54,79.5C64.2,79.5 72.5,71.5 72.5,60C72.5,58.5 72.4,57 72.2,55.6C70.5,68 63,74.5 54,74.5C45,74.5 37.5,68 35.8,55.6C35.6,57 35.5,58.5 35.5,60C35.5,71.5 43.8,79.5 54,79.5Z" />
+    <path
+        android:fillColor="#231E29"
+        android:pathData="M37.6,52.6L43.8,48.6L48.2,53.2L53.4,47.4L58.4,53.2L63.4,48.6L70.4,52.6L70.6,59.6L63.4,55.8L58.4,60.6L53.4,54.8L48.2,60.6L43.8,56L37.4,59.8Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M48.4,56.6m-1.9,0a1.9,1.9 0,1 1,3.8 0a1.9,1.9 0,1 1,-3.8 0" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M58.6,56.9m-1.9,0a1.9,1.9 0,1 1,3.8 0a1.9,1.9 0,1 1,-3.8 0" />
+    <path
+        android:fillColor="#D9B25A"
+        android:pathData="M68.5,37.5l1.1,2.6l2.6,1.1l-2.6,1.1l-1.1,2.6l-1.1,-2.6l-2.6,-1.1l2.6,-1.1z" />
+</vector>
