@@ -61,6 +61,7 @@ android {
             it.systemProperty("robolectric.dependency.repo.url", "https://maven.aliyun.com/repository/central")
             it.systemProperty("maven.repo.local", "D:/DevTools/m2/repository")
             it.systemProperty("gallery.dir", rootProject.file("gallery").absolutePath)
+            it.systemProperty("promo.dir", (project.findProperty("promoDir") ?: "").toString())
             it.maxHeapSize = "2g"
         }
     }
