@@ -107,7 +107,7 @@ fun QuizFlow(onAdopt: (Adoption) -> Unit) {
             onDismissRequest = { confirming = false },
             containerColor = Palette.Card,
             title = { Text("确定是它了吗？") },
-            text = { Text("带它回家之后，就再也不能更换了。") },
+            text = { Text("一次安装只能测一次。带它回家之后，就不能再换了。") },
             confirmButton = {
                 TextButton(onClick = {
                     confirming = false

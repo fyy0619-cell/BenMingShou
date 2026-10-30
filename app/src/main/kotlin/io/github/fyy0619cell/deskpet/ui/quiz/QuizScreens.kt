@@ -75,7 +75,7 @@ fun IntroScreen(speciesCount: Int, questionCount: Int, animate: Boolean = true, 
             color = Palette.Muted,
         )
         Spacer(Modifier.weight(1.4f))
-        Text("测试只有一次机会，它会一直陪着你。", style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
+        Text("一次安装只能测一次，它会一直陪着你。", style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
         Spacer(Modifier.height(16.dp))
         PillButton("开始", onStart)
     }
